@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Dino Dash">
+  <rect width="32" height="32" rx="7" fill="#2A1052"/>
+  <rect x="1.25" y="1.25" width="29.5" height="29.5" rx="6" fill="none" stroke="#9A5CFF" stroke-width="1.5" opacity=".55"/>
+  <circle cx="6.5" cy="6.5" r="2.1" fill="#FFE45C"/>
+  <circle cx="25.5" cy="6.5" r="2.1" fill="#FFE45C"/>
+  <path d="M9.5 13.5 L11.5 8.5 L13.5 13.5 Z M14.5 13.5 L16.5 9 L18.5 13.5 Z" fill="#2FA866"/>
+  <path d="M8 13 h12 a6 6 0 0 1 6 6 v2.5 a1.5 1.5 0 0 1 -1.5 1.5 h-16.5 a4 4 0 0 1 -4 -4 v-2 a4 4 0 0 1 4 -4 z" fill="#5AE38C"/>
+  <path d="M7 23 h3 v3.5 h-3 z M18 23 h3 v3.5 h-3 z" fill="#2FA866"/>
+  <circle cx="21" cy="17.5" r="1.8" fill="#150A2B"/>
+</svg>

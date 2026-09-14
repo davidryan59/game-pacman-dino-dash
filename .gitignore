@@ -1,0 +1,10 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+
+# Built by build.py from index.html; regenerate before deploying, don't commit
+dist/index.html
+dist/_headers
+
+# Other
+temp*

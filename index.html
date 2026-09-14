@@ -1,0 +1,1519 @@
+<title>Dino Dash</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #150A2B;
+    --ground-2: #1E0E3D;
+    --maze: #3A1C6E;
+    --neon: #9A5CFF;
+    --neon-soft: #6B3BB8;
+    --path: #2A1052;
+    --amber: #FFD166;
+    --coin: #FFE45C;
+    --dino: #5AE38C;
+    --cat: #FF6FA5;
+    --eagle: #7FD8FF;
+    --relic: #FF4FD8;
+    --ink: #EDE4FF;
+    --ink-dim: #A28EC8;
+    --line: #3B2560;
+    --danger: #FF5C7A;
+    --font-display: "Press Start 2P", "Courier New", monospace;
+    --font-body: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+    --font-num: "IBM Plex Mono", ui-monospace, monospace;
+  }
+
+  body {
+    background:
+      radial-gradient(120% 80% at 50% -10%, #3A1470 0%, rgba(58,20,112,0) 60%),
+      linear-gradient(180deg, var(--ground) 0%, #0E0620 100%);
+    background-attachment: fixed;
+    color: var(--ink);
+    font-family: var(--font-body);
+    min-height: 100vh;
+  }
+
+  .shell {
+    max-width: 860px;
+    margin: 0 auto;
+    padding-inline: 18px;
+    padding-block: 22px 44px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* ---------- masthead ---------- */
+  .masthead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .wordmark {
+    font-family: var(--font-display);
+    font-size: clamp(17px, 4.4vw, 26px);
+    line-height: 1.35;
+    margin: 0;
+    color: var(--amber);
+    text-shadow: 0 0 18px rgba(255, 209, 102, .35), 3px 3px 0 #7A2DA8;
+    letter-spacing: .5px;
+  }
+  .tagline { margin: 6px 0 0; color: var(--ink-dim); font-size: 13.5px; max-width: 42ch; }
+  .sound-row { display: flex; gap: 8px; }
+
+  button {
+    font: inherit;
+    cursor: pointer;
+    color: var(--ink);
+    background: rgba(154, 92, 255, .12);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 12px;
+    letter-spacing: .3px;
+    transition: background .15s ease, border-color .15s ease, transform .1s ease;
+  }
+  button:hover { background: rgba(154, 92, 255, .26); border-color: var(--neon); }
+  button:active { transform: translateY(1px); }
+  button[aria-pressed="false"] { color: var(--ink-dim); opacity: .72; }
+  button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  .btn-primary {
+    font-family: var(--font-display);
+    font-size: 12px;
+    padding: 14px 18px;
+    background: var(--amber);
+    color: #2A1052;
+    border-color: #FFE9B0;
+    box-shadow: 0 0 24px rgba(255, 209, 102, .3);
+  }
+  .btn-primary:hover { background: #FFE08A; }
+
+  /* ---------- HUD ---------- */
+  .hud {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .hud > div { background: #1C0D36; padding: 9px 11px; display: flex; flex-direction: column; gap: 5px; }
+  .hud .k { font-family: var(--font-display); font-size: 8px; color: var(--ink-dim); letter-spacing: .6px; }
+  .hud .v { font-family: var(--font-num); font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .pips { display: flex; gap: 5px; align-items: center; height: 21px; }
+  .pip { width: 13px; height: 13px; border: 1.5px solid var(--relic); border-radius: 2px; transform: rotate(45deg); }
+  .pip.on { background: var(--relic); box-shadow: 0 0 10px rgba(255, 79, 216, .8); }
+  .life { width: 11px; height: 11px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 9px rgba(255,209,102,.6); }
+  .life.off { background: #3B2560; box-shadow: none; }
+
+  /* ---------- stage ---------- */
+  .stage { position: relative; display: flex; justify-content: center; }
+  canvas {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border: 1px solid var(--neon-soft);
+    border-radius: 6px;
+    background: var(--path);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.5), 0 18px 50px rgba(0,0,0,.55), 0 0 60px rgba(122, 45, 168, .25) inset;
+    touch-action: none;
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    text-align: center;
+    padding: 22px;
+    background: rgba(14, 6, 32, .88);
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+  }
+  .overlay h2 {
+    font-family: var(--font-display);
+    font-size: clamp(14px, 3.6vw, 21px);
+    margin: 0;
+    line-height: 1.5;
+    text-wrap: balance;
+    color: var(--amber);
+  }
+  .overlay p { margin: 0; max-width: 34ch; font-size: 13.5px; color: var(--ink-dim); line-height: 1.6; }
+  .overlay .score-line { font-family: var(--font-num); font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .overlay .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+  /* ---------- briefing ---------- */
+  .briefing { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+  .brief-col h3 {
+    font-family: var(--font-display);
+    font-size: 9px;
+    color: var(--neon);
+    letter-spacing: .8px;
+    margin: 0 0 9px;
+    padding-bottom: 7px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brief-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .brief-col li { display: flex; gap: 9px; align-items: baseline; font-size: 13px; color: var(--ink-dim); line-height: 1.45; }
+  .brief-col li b { color: var(--ink); font-weight: 600; }
+  .swatch { width: 9px; height: 9px; border-radius: 2px; flex: none; transform: translateY(-1px); }
+  kbd {
+    font-family: var(--font-num);
+    font-size: 11px;
+    background: #1C0D36;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 3px;
+    padding: 2px 6px;
+    color: var(--ink);
+  }
+
+  /* ---------- touch pad ---------- */
+  .pad { display: none; grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(2, 60px); gap: 7px; justify-content: center; margin-top: 4px; }
+  .pad button { font-size: 19px; padding: 0; background: rgba(154, 92, 255, .16); }
+  .pad .up { grid-column: 2; grid-row: 1; }
+  .pad .left { grid-column: 1; grid-row: 2; }
+  .pad .down { grid-column: 2; grid-row: 2; }
+  .pad .right { grid-column: 3; grid-row: 2; }
+  @media (hover: none) and (pointer: coarse) { .pad { display: grid; } }
+
+  footer { color: var(--ink-dim); font-size: 12px; border-top: 1px solid var(--line); padding-top: 12px; line-height: 1.6; }
+
+  [hidden] { display: none !important; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+</style>
+
+<div class="shell">
+  <header class="masthead">
+    <div>
+      <h1 class="wordmark">DINO DASH</h1>
+      <p class="tagline">Outrun the herd, mine three relics, clear seven ruins. Smash the ones that stop moving.</p>
+    </div>
+    <div class="sound-row">
+      <button id="music-btn" aria-pressed="true">♪ Music</button>
+      <button id="voice-btn" aria-pressed="true">Voice</button>
+    </div>
+  </header>
+
+  <div class="hud">
+    <div><span class="k">LEVEL</span><span class="v" id="hud-level">1 / 7</span></div>
+    <div><span class="k">SCORE</span><span class="v" id="hud-score">0</span></div>
+    <div><span class="k">RELICS</span><span class="pips" id="hud-relics"></span></div>
+    <div><span class="k">COINS</span><span class="v" id="hud-coins">0</span></div>
+    <div><span class="k">RUNNERS</span><span class="pips" id="hud-lives"></span></div>
+    <div><span class="k">POWER</span><span class="v" id="hud-power" style="font-size:12px">—</span></div>
+  </div>
+
+  <div class="stage">
+    <canvas id="game" width="532" height="420"></canvas>
+    <div class="overlay" id="overlay">
+      <h2 id="ov-title">DINO DASH</h2>
+      <p id="ov-text">You are a lone runner in a purple ruin. Slow dinosaurs plod after you, cats hunt fast, and eagles fly straight over the walls. Mine three relics to open the exit.</p>
+      <p class="score-line" id="ov-score" hidden></p>
+      <div class="btn-row" id="ov-buttons"></div>
+    </div>
+  </div>
+
+  <div class="pad">
+    <button class="up" data-dir="up" aria-label="Move up">▲</button>
+    <button class="left" data-dir="left" aria-label="Move left">◀</button>
+    <button class="down" data-dir="down" aria-label="Move down">▼</button>
+    <button class="right" data-dir="right" aria-label="Move right">▶</button>
+  </div>
+
+  <section class="briefing">
+    <div class="brief-col">
+      <h3>WHO CHASES YOU</h3>
+      <ul>
+        <li><span class="swatch" style="background:var(--dino)"></span><span><b>Dinosaurs</b> — slow, but they never lose your scent.</span></li>
+        <li><span class="swatch" style="background:var(--cat)"></span><span><b>Cats</b> — quick and twitchy, they cut corners.</span></li>
+        <li><span class="swatch" style="background:var(--eagle)"></span><span><b>Eagles</b> — they ignore walls and fly straight at you.</span></li>
+        <li><span class="swatch" style="background:var(--danger)"></span><span><b>Freeze or Smash one and it breaks apart.</b> Run into a frozen enemy and it is gone for the rest of the level.</span></li>
+      </ul>
+    </div>
+    <div class="brief-col">
+      <h3>WHAT YOU COLLECT</h3>
+      <ul>
+        <li><span class="swatch" style="background:var(--relic)"></span><span><b>Relics</b> — stand on one to mine it. Three clears the level and each one pays a power.</span></li>
+        <li><span class="swatch" style="background:var(--coin)"></span><span><b>Coins</b> — every tenth coin makes the runner jump and shout "Yay!".</span></li>
+        <li><span class="swatch" style="background:var(--danger)"></span><span>A relic wears the colour of the power it pays. One red <b>Smash</b> relic hides in every level.</span></li>
+      </ul>
+    </div>
+    <div class="brief-col">
+      <h3>THE FIVE POWERS</h3>
+      <ul>
+        <li><span class="swatch" style="background:#FF5C7A"></span><span><b>Smash</b> — 8s. Touch an enemy and it is destroyed.</span></li>
+        <li><span class="swatch" style="background:#7FD8FF"></span><span><b>Freeze</b> — 6s. Everything stops, and stopped enemies break.</span></li>
+        <li><span class="swatch" style="background:#FF4FD8"></span><span><b>Scare</b> — 8s. They flee, and a touch sends one home.</span></li>
+        <li><span class="swatch" style="background:#FFD166"></span><span><b>Speed</b> — 8s. You outrun everything but the eagles.</span></li>
+        <li><span class="swatch" style="background:#5AE38C"></span><span><b>Shield</b> — 10s. A hit costs you nothing.</span></li>
+      </ul>
+    </div>
+    <div class="brief-col">
+      <h3>CONTROLS</h3>
+      <ul>
+        <li><span><kbd>←</kbd> <kbd>↑</kbd> <kbd>↓</kbd> <kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to run.</span></li>
+        <li><span><kbd>P</kbd> pauses. <kbd>M</kbd> mutes the music.</span></li>
+        <li><span>On a phone, swipe the maze or use the pad above.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>Every maze is braided: no tunnel ends in a wall, so there is always a way out of a chase. Seven ruins, each larger and meaner than the last. Powers last a few seconds — spend them moving, not hiding.</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------------------------------------------------------------- constants
+  const TS = 28;                       // tile size in CSS pixels
+  const WALL = 1, PATH = 0;
+  const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+  const POWERS = {
+    scare:  { label: "SCARE",  time: 8,  color: "#FF4FD8" },
+    freeze: { label: "FREEZE", time: 6,  color: "#7FD8FF" },
+    speed:  { label: "SPEED",  time: 8,  color: "#FFD166" },
+    shield: { label: "SHIELD", time: 10, color: "#5AE38C" },
+    smash:  { label: "SMASH",  time: 8,  color: "#FF5C7A" }
+  };
+  const POWER_ORDER = ["scare", "freeze", "speed", "shield"];
+
+  const LEVELS = [
+    { cols: 19, rows: 15, dinos: 2, cats: 1, eagles: 1, mul: 1.00, loops: 0.15, dawdler: true },
+    { cols: 19, rows: 15, dinos: 3, cats: 1, eagles: 1, mul: 1.05, loops: 0.14 },
+    { cols: 21, rows: 15, dinos: 3, cats: 2, eagles: 1, mul: 1.10, loops: 0.13 },
+    { cols: 21, rows: 17, dinos: 4, cats: 2, eagles: 2, mul: 1.15, loops: 0.12 },
+    { cols: 23, rows: 17, dinos: 4, cats: 3, eagles: 2, mul: 1.21, loops: 0.11 },
+    { cols: 23, rows: 19, dinos: 5, cats: 3, eagles: 3, mul: 1.27, loops: 0.10 },
+    { cols: 25, rows: 19, dinos: 6, cats: 4, eagles: 3, mul: 1.34, loops: 0.09 }
+  ];
+
+  const SPEED = { player: 5.0, boosted: 7.4, dino: 2.15, cat: 3.35, eagle: 2.45 };
+
+  // ---------------------------------------------------------------- elements
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const overlay = document.getElementById("overlay");
+  const ovTitle = document.getElementById("ov-title");
+  const ovText = document.getElementById("ov-text");
+  const ovScore = document.getElementById("ov-score");
+  const ovButtons = document.getElementById("ov-buttons");
+  const hud = {
+    level: document.getElementById("hud-level"),
+    score: document.getElementById("hud-score"),
+    relics: document.getElementById("hud-relics"),
+    coins: document.getElementById("hud-coins"),
+    lives: document.getElementById("hud-lives"),
+    power: document.getElementById("hud-power")
+  };
+
+  // ---------------------------------------------------------------- audio
+  const Audio_ = {
+    ctx: null, master: null, musicGain: null, on: true, voice: true,
+    step: 0, nextTime: 0, timer: null, tempo: 132,
+
+    init() {
+      if (this.ctx) return;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) { this.on = false; return; }
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0.5;
+      this.master.connect(this.ctx.destination);
+      this.musicGain = this.ctx.createGain();
+      this.musicGain.gain.value = 0.22;
+      this.musicGain.connect(this.master);
+    },
+    resume() { if (this.ctx && this.ctx.state === "suspended") this.ctx.resume(); },
+    hz(midi) { return 440 * Math.pow(2, (midi - 69) / 12); },
+
+    blip(midi, time, dur, type, gain, dest) {
+      if (!this.ctx) return;
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o.type = type || "square";
+      o.frequency.setValueAtTime(this.hz(midi), time);
+      g.gain.setValueAtTime(0.0001, time);
+      g.gain.exponentialRampToValueAtTime(gain, time + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+      o.connect(g); g.connect(dest || this.master);
+      o.start(time); o.stop(time + dur + 0.02);
+    },
+    noise(time, dur, gain) {
+      if (!this.ctx) return;
+      const n = Math.floor(this.ctx.sampleRate * dur);
+      const buf = this.ctx.createBuffer(1, n, this.ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+      const s = this.ctx.createBufferSource();
+      s.buffer = buf;
+      const g = this.ctx.createGain();
+      g.gain.value = gain;
+      const f = this.ctx.createBiquadFilter();
+      f.type = "highpass"; f.frequency.value = 4200;
+      s.connect(f); f.connect(g); g.connect(this.musicGain || this.master);
+      s.start(time);
+    },
+    sweep(from, to, dur, type, gain) {
+      if (!this.ctx || !this.on) return;
+      const t = this.ctx.currentTime;
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o.type = type || "square";
+      o.frequency.setValueAtTime(from, t);
+      o.frequency.exponentialRampToValueAtTime(to, t + dur);
+      g.gain.setValueAtTime(gain, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(this.master);
+      o.start(t); o.stop(t + dur + 0.02);
+    },
+    seq(notes, type, gain, spacing) {
+      if (!this.ctx || !this.on) return;
+      const t = this.ctx.currentTime;
+      notes.forEach((m, i) => this.blip(m, t + i * spacing, spacing * 1.8, type, gain));
+    },
+
+    sfxCoin(n) { if (this.on) this.seq([76 + (n % 4)], "square", 0.10, 0.06); },
+    sfxYay() { this.seq([72, 76, 79, 84], "square", 0.09, 0.075); },
+    sfxMine() { this.seq([64, 68, 71, 76, 80], "triangle", 0.15, 0.055); },
+    sfxPower() { this.seq([60, 67, 72, 79], "sawtooth", 0.11, 0.05); },
+    sfxHit() { this.sweep(420, 70, 0.55, "sawtooth", 0.18); },
+    sfxSmash() { this.seq([84, 72, 60], "square", 0.16, 0.05); this.sweep(900, 110, 0.28, "sawtooth", 0.13); },
+    sfxLevel() { this.seq([72, 72, 76, 79, 84, 88], "square", 0.14, 0.1); },
+    sfxGameOver() { this.sweep(300, 45, 1.2, "square", 0.16); },
+    sfxWin() { this.seq([72, 76, 79, 84, 79, 84, 88, 91], "square", 0.14, 0.11); },
+
+    say(text) {
+      if (!this.voice || !("speechSynthesis" in window)) return;
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        u.rate = 1.25; u.pitch = 1.6; u.volume = 0.22;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(u);
+      } catch (e) { /* speech is a bonus, never a blocker */ }
+    },
+
+    // chiptune loop: A-minor vamp, bass + arpeggio + hat
+    CHORDS: [[57, 60, 64], [53, 57, 60], [48, 52, 55], [52, 55, 59]],
+    ARP: [0, 1, 2, 1, 2, 1, 0, 2],
+    startMusic(level) {
+      this.init();
+      if (!this.ctx || !this.on) return;
+      this.resume();
+      this.tempo = 128 + level * 7;
+      this.stopMusic();
+      this.step = 0;
+      this.nextTime = this.ctx.currentTime + 0.08;
+      this.timer = setInterval(() => this.schedule(), 25);
+    },
+    stopMusic() { if (this.timer) { clearInterval(this.timer); this.timer = null; } },
+    schedule() {
+      if (!this.ctx) return;
+      const spb = 30 / this.tempo;            // one eighth note
+      while (this.nextTime < this.ctx.currentTime + 0.12) {
+        const s = this.step, bar = Math.floor(s / 8) % 4, i = s % 8;
+        const chord = this.CHORDS[bar];
+        const t = this.nextTime;
+        this.blip(chord[this.ARP[i]] + 12, t, spb * 0.9, "square", 0.09, this.musicGain);
+        if (i === 0 || i === 3 || i === 6) this.blip(chord[0] - 12, t, spb * 1.5, "triangle", 0.20, this.musicGain);
+        if (i % 2 === 1) this.noise(t, 0.035, 0.055);
+        if (bar === 3 && i === 7) this.blip(chord[2] + 24, t, spb, "square", 0.07, this.musicGain);
+        this.nextTime += spb;
+        this.step = (s + 1) % 32;
+      }
+    }
+  };
+
+  // ---------------------------------------------------------------- maze
+  function rng(seed) {
+    let s = seed >>> 0;
+    return function () {
+      s ^= s << 13; s >>>= 0;
+      s ^= s >> 17;
+      s ^= s << 5; s >>>= 0;
+      return s / 4294967296;
+    };
+  }
+
+  function genMaze(cols, rows, loops, rand) {
+    const g = [];
+    for (let r = 0; r < rows; r++) g.push(new Array(cols).fill(WALL));
+
+    // 1. carve a perfect maze on the odd grid
+    const stack = [[1, 1]];
+    g[1][1] = PATH;
+    while (stack.length) {
+      const [cx, cy] = stack[stack.length - 1];
+      const opts = [];
+      if (cy > 2 && g[cy - 2][cx] === WALL) opts.push([0, -2]);
+      if (cy < rows - 3 && g[cy + 2][cx] === WALL) opts.push([0, 2]);
+      if (cx > 2 && g[cy][cx - 2] === WALL) opts.push([-2, 0]);
+      if (cx < cols - 3 && g[cy][cx + 2] === WALL) opts.push([2, 0]);
+      if (!opts.length) { stack.pop(); continue; }
+      const [dx, dy] = opts[Math.floor(rand() * opts.length)];
+      g[cy + dy / 2][cx + dx / 2] = PATH;
+      g[cy + dy][cx + dx] = PATH;
+      stack.push([cx + dx, cy + dy]);
+    }
+
+    const exits = (c, r) =>
+      (g[r - 1][c] === PATH) + (g[r + 1][c] === PATH) + (g[r][c - 1] === PATH) + (g[r][c + 1] === PATH);
+
+    // 2. open interior walls that already touch two corridors. A carved maze is
+    //    a tree, and this is what turns it into a board full of loops.
+    for (let pass = 0; pass < 2; pass++) {
+      for (let r = 1; r < rows - 1; r++) {
+        for (let c = 1; c < cols - 1; c++) {
+          if (g[r][c] !== WALL || rand() > loops) continue;
+          if (exits(c, r) >= 2) g[r][c] = PATH;
+        }
+      }
+    }
+
+    // 3. braid: give every dead end a second way out, so no tunnel can trap you
+    for (let guard = 0; guard < 40; guard++) {
+      let cuts = 0;
+      for (let r = 1; r < rows - 1; r++) {
+        for (let c = 1; c < cols - 1; c++) {
+          if (g[r][c] !== PATH || exits(c, r) > 1) continue;
+          const cands = [];
+          for (const k in DIRS) {
+            const nx = c + DIRS[k][0], ny = r + DIRS[k][1];
+            if (nx < 1 || ny < 1 || nx > cols - 2 || ny > rows - 2) continue;
+            if (g[ny][nx] !== WALL) continue;
+            const fx = c + DIRS[k][0] * 2, fy = r + DIRS[k][1] * 2;
+            const joins = fx > 0 && fy > 0 && fx < cols - 1 && fy < rows - 1 && g[fy][fx] === PATH;
+            cands.push({ nx: nx, ny: ny, joins: joins });
+          }
+          if (!cands.length) continue;
+          // a wall with corridor on the far side closes a loop, so prefer it
+          const joiners = cands.filter(o => o.joins);
+          const pool = joiners.length ? joiners : cands;
+          const pick = pool[Math.floor(rand() * pool.length)];
+          g[pick.ny][pick.nx] = PATH;
+          cuts++;
+        }
+      }
+      if (!cuts) break;
+    }
+    return g;
+  }
+
+  // ---------------------------------------------------------------- state
+  const state = {
+    mode: "title",          // title | playing | paused | levelclear | gameover | victory
+    level: 1, score: 0, lives: 3,
+    coins: 0, coinsTotal: 0,
+    grid: null, cols: 0, rows: 0,
+    coinSet: null, relics: [], relicsDone: 0,
+    player: null, enemies: [],
+    dist: null,
+    power: null, powerLeft: 0,
+    mining: 0, miningIdx: -1,
+    shout: 0, jump: 0, hitFlash: 0, clearGlow: 0, bursts: [],
+    mazeCanvas: null,
+    t: 0, last: 0, spawnGuard: 0
+  };
+
+  const keys = { wanted: null };
+
+  function tileAt(x, y) { return state.grid[y] && state.grid[y][x]; }
+  function walkable(x, y) { return tileAt(x, y) === PATH; }
+
+  function bfs(sx, sy) {
+    const { cols, rows, grid } = state;
+    const dist = new Int16Array(cols * rows).fill(-1);
+    const q = [sy * cols + sx];
+    dist[sy * cols + sx] = 0;
+    for (let head = 0; head < q.length; head++) {
+      const cur = q[head], cx = cur % cols, cy = (cur / cols) | 0, d = dist[cur];
+      for (const k in DIRS) {
+        const nx = cx + DIRS[k][0], ny = cy + DIRS[k][1];
+        if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue;
+        if (grid[ny][nx] !== PATH) continue;
+        const idx = ny * cols + nx;
+        if (dist[idx] !== -1) continue;
+        dist[idx] = d + 1;
+        q.push(idx);
+      }
+    }
+    return dist;
+  }
+
+  // ---------------------------------------------------------------- level build
+  function buildLevel(n) {
+    const cfg = LEVELS[n - 1];
+    const rand = rng(0x9E37 * n + 1337);
+    state.cols = cfg.cols; state.rows = cfg.rows;
+    state.grid = genMaze(cfg.cols, cfg.rows, cfg.loops, rand);
+
+    // player start: top-left open cell
+    state.player = {
+      x: 1.5, y: 1.5, dir: null, want: null, halt: false,
+      speed: SPEED.player, phase: 0, face: 1
+    };
+
+    const dist = bfs(1, 1);
+    const open = [];
+    for (let r = 1; r < cfg.rows - 1; r++) {
+      for (let c = 1; c < cfg.cols - 1; c++) {
+        if (state.grid[r][c] === PATH) open.push([c, r, dist[r * cfg.cols + c]]);
+      }
+    }
+
+    // coins on every open tile except the spawn tile
+    state.coinSet = new Set();
+    for (const [c, r] of open) if (!(c === 1 && r === 1)) state.coinSet.add(r * cfg.cols + c);
+
+    // three relics, spread out and away from the start
+    const far = open.filter(o => o[2] > Math.max(8, (cfg.cols + cfg.rows) / 4)).sort((a, b) => b[2] - a[2]);
+    const pool = far.length >= 12 ? far : open.slice().sort((a, b) => b[2] - a[2]);
+    state.relics = [];
+    const picked = [];
+    for (const cand of pool) {
+      if (picked.every(p => Math.abs(p[0] - cand[0]) + Math.abs(p[1] - cand[1]) > 7)) {
+        picked.push(cand);
+        if (picked.length === 3) break;
+      }
+    }
+    while (picked.length < 3) picked.push(pool[Math.floor(rand() * pool.length)]);
+    picked.forEach((p, i) => {
+      const power = (i === (n - 1) % 3) ? "smash" : POWER_ORDER[(i + n) % POWER_ORDER.length];
+      state.relics.push({ x: p[0], y: p[1], done: false, power: power, spin: i * 1.1 });
+      state.coinSet.delete(p[1] * cfg.cols + p[0]);
+    });
+
+    // enemies spawn far from the player
+    state.enemies = [];
+    const spawns = open.filter(o => o[2] > 9).sort((a, b) => b[2] - a[2]);
+    const takeSpawn = (i) => spawns.length ? spawns[(i * 3) % spawns.length] : [cfg.cols - 2, cfg.rows - 2, 0];
+    let idx = 0;
+    for (let i = 0; i < cfg.dinos; i++) {
+      const s = takeSpawn(idx++);
+      const dino = makeEnemy("dino", s[0], s[1], cfg.mul);
+      // level one keeps one dawdler, slow enough for a small player to escape
+      if (cfg.dawdler && i === 0) { dino.speed *= 0.5; dino.dawdle = true; }
+      state.enemies.push(dino);
+    }
+    for (let i = 0; i < cfg.cats; i++) { const s = takeSpawn(idx++); state.enemies.push(makeEnemy("cat", s[0], s[1], cfg.mul)); }
+    for (let i = 0; i < cfg.eagles; i++) { const s = takeSpawn(idx++); state.enemies.push(makeEnemy("eagle", s[0], s[1], cfg.mul)); }
+
+    state.relicsDone = 0;
+    state.bursts = [];
+    state.coins = 0;
+    state.power = null; state.powerLeft = 0;
+    state.mining = 0; state.miningIdx = -1;
+    state.spawnGuard = 1.6;
+    keys.wanted = null;
+
+    resizeCanvas();
+    renderMaze();
+    updateHud();
+  }
+
+  function makeEnemy(kind, x, y, mul) {
+    const base = kind === "dino" ? SPEED.dino : kind === "cat" ? SPEED.cat : SPEED.eagle;
+    return {
+      kind, x: x + 0.5, y: y + 0.5, home: [x + 0.5, y + 0.5],
+      dir: DIRS.left, speed: base * mul, phase: Math.random() * 6,
+      scared: false, wobble: Math.random() * 6, node: -1, uphill: 0, dead: false
+    };
+  }
+
+  function resetPositions() {
+    state.player.x = 1.5; state.player.y = 1.5;
+    state.player.dir = null; state.player.want = null; state.player.halt = false;
+    keys.wanted = null;
+    state.enemies.forEach(e => { e.x = e.home[0]; e.y = e.home[1]; e.scared = false; e.dir = null; e.node = -1; e.uphill = 0; });
+    state.mining = 0; state.miningIdx = -1;
+    state.spawnGuard = 1.8;
+  }
+
+  // ---------------------------------------------------------------- canvas
+  function resizeCanvas() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = state.cols * TS, h = state.rows * TS;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    canvas.style.width = w + "px";
+    canvas.style.height = h + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function renderMaze() {
+    const w = state.cols * TS, h = state.rows * TS;
+    const mc = document.createElement("canvas");
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    mc.width = w * dpr; mc.height = h * dpr;
+    const m = mc.getContext("2d");
+    m.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // floor
+    const grad = m.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, "#2E1259");
+    grad.addColorStop(1, "#210B45");
+    m.fillStyle = grad;
+    m.fillRect(0, 0, w, h);
+
+    // floor grid, faint
+    m.strokeStyle = "rgba(154, 92, 255, .07)";
+    m.lineWidth = 1;
+    for (let c = 1; c < state.cols; c++) { m.beginPath(); m.moveTo(c * TS, 0); m.lineTo(c * TS, h); m.stroke(); }
+    for (let r = 1; r < state.rows; r++) { m.beginPath(); m.moveTo(0, r * TS); m.lineTo(w, r * TS); m.stroke(); }
+
+    // walls as neon blocks
+    m.shadowColor = "rgba(154, 92, 255, .75)";
+    for (let r = 0; r < state.rows; r++) {
+      for (let c = 0; c < state.cols; c++) {
+        if (state.grid[r][c] !== WALL) continue;
+        const x = c * TS + 1.5, y = r * TS + 1.5, s = TS - 3;
+        m.shadowBlur = 10;
+        m.fillStyle = "#3A1C6E";
+        roundRect(m, x, y, s, s, 5);
+        m.fill();
+        m.shadowBlur = 0;
+        m.strokeStyle = "rgba(154, 92, 255, .55)";
+        m.lineWidth = 1.2;
+        roundRect(m, x, y, s, s, 5);
+        m.stroke();
+        m.fillStyle = "rgba(255, 255, 255, .05)";
+        roundRect(m, x + 3, y + 3, s - 6, (s - 6) / 2.4, 3);
+        m.fill();
+      }
+    }
+    state.mazeCanvas = mc;
+  }
+
+  function roundRect(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  // ---------------------------------------------------------------- update
+  // A turn is allowed at a tile centre. "Centre" has to be a window wide enough
+  // to survive one frame of travel, or a fast runner skips past every junction.
+  function atCentre(ent, step) {
+    const cx = Math.floor(ent.x) + 0.5, cy = Math.floor(ent.y) + 0.5;
+    const pad = step + 0.03;
+    return Math.abs(ent.x - cx) <= pad && Math.abs(ent.y - cy) <= pad;
+  }
+
+  // Alignment on the axis a move in d crosses: a horizontal move needs the y
+  // lane, a vertical one needs the x lane. The axis you travel along does not
+  // have to be lined up at all, which is what lets a stopped runner set off again.
+  function onLane(ent, d, step) {
+    const pad = step + 0.03;
+    return d[0]
+      ? Math.abs(ent.y - (Math.floor(ent.y) + 0.5)) <= pad
+      : Math.abs(ent.x - (Math.floor(ent.x) + 0.5)) <= pad;
+  }
+
+  function tryTurn(p, want, step) {
+    if (!want) return false;
+    const d = DIRS[want];
+    // already heading that way: clear the request, never re-snap to the centre
+    if (p.dir && d[0] === p.dir[0] && d[1] === p.dir[1]) {
+      p.want = null; keys.wanted = null; p.halt = false;
+      return false;
+    }
+    // a reversal needs no junction
+    if (p.dir && d[0] === -p.dir[0] && d[1] === -p.dir[1]) {
+      p.dir = d; p.want = null; keys.wanted = null; p.halt = false;
+      if (d[0]) p.face = d[0];
+      return true;
+    }
+    const tx = Math.floor(p.x) + d[0], ty = Math.floor(p.y) + d[1];
+    if (!walkable(tx, ty)) {
+      // You asked for a wall. A runner may only ever come to rest on the middle
+      // of a square, so book the stop and pull up at the next centre.
+      p.want = null;
+      keys.wanted = null;
+      if (p.dir) p.halt = true;
+      return false;
+    }
+    // A runner in motion must be on the lane to turn across it, or it cuts the
+    // corner. A standing runner is nudged onto the lane instead: that nudge
+    // stays inside the tile it is already in, so it can never cross a wall.
+    if (p.dir && !onLane(p, d, step)) return false;
+    if (d[0]) p.y = Math.floor(p.y) + 0.5;
+    else p.x = Math.floor(p.x) + 0.5;
+    p.dir = d;
+    p.want = null;
+    keys.wanted = null;
+    p.halt = false;
+    if (d[0]) p.face = d[0];
+    return true;
+  }
+
+  function moveAxis(ent, dist) {
+    const d = ent.dir;
+    if (!d) return;
+    const nx = ent.x + d[0] * dist, ny = ent.y + d[1] * dist;
+    // look one tile ahead along the travel axis
+    const ax = Math.floor(nx + d[0] * 0.5), ay = Math.floor(ny + d[1] * 0.5);
+    if (walkable(ax, ay)) { ent.x = nx; ent.y = ny; }
+    else {
+      ent.x = Math.floor(ent.x) + 0.5;
+      ent.y = Math.floor(ent.y) + 0.5;
+      ent.dir = null;
+      if (ent !== state.player) ent.node = -1;
+    }
+  }
+
+  function updatePlayer(dt) {
+    const p = state.player;
+    if (keys.wanted) p.want = keys.wanted;
+    const spd = (state.power === "speed" ? SPEED.boosted : SPEED.player);
+    const step = spd * dt;
+    tryTurn(p, p.want, step);
+    if (p.dir) {
+      const axis = p.dir[0] ? "x" : "y";
+      const sign = p.dir[0] || p.dir[1];
+      const before = p[axis];
+      moveAxis(p, step);
+      p.phase += dt * spd * 1.9;
+      if (p.halt && p.dir) {
+        // the centre being run at: this square's own, unless it is behind us
+        let centre = Math.floor(before) + 0.5;
+        if (sign > 0 && centre < before) centre += 1;
+        if (sign < 0 && centre > before) centre -= 1;
+        if (sign > 0 ? p[axis] >= centre : p[axis] <= centre) {
+          p[axis] = centre;
+          p.dir = null;
+        }
+      }
+      if (!p.dir) p.halt = false;
+    }
+
+    // coins
+    const tx = Math.floor(p.x), ty = Math.floor(p.y), key = ty * state.cols + tx;
+    if (state.coinSet.has(key)) {
+      state.coinSet.delete(key);
+      state.coins++; state.coinsTotal++; state.score += 10;
+      Audio_.sfxCoin(state.coins);
+      if (state.coins % 10 === 0) {
+        state.jump = 0.62; state.shout = 1.15;
+        state.score += 50;
+        Audio_.sfxYay();
+        Audio_.say("Yay!");
+      }
+      updateHud();
+    }
+
+    // relic mining
+    const onRelic = state.relics.findIndex(r => !r.done && r.x === tx && r.y === ty);
+    if (onRelic >= 0) {
+      if (state.miningIdx !== onRelic) { state.miningIdx = onRelic; state.mining = 0; }
+      state.mining += dt / 0.85;
+      if (state.mining >= 1) {
+        const relic = state.relics[onRelic];
+        relic.done = true;
+        state.relicsDone++;
+        state.score += 300;
+        state.mining = 0; state.miningIdx = -1;
+        grantPower(relic.power);
+        Audio_.sfxMine();
+        updateHud();
+        if (state.relicsDone >= 3) return finishLevel();
+      }
+    } else if (state.mining > 0) {
+      state.mining = Math.max(0, state.mining - dt / 0.4);
+      if (state.mining === 0) state.miningIdx = -1;
+    }
+  }
+
+  function grantPower(kind) {
+    state.power = kind;
+    state.powerLeft = POWERS[kind].time;
+    state.enemies.forEach(e => { e.scared = (kind === "scare"); });
+    Audio_.sfxPower();
+    updateHud();
+  }
+
+  function destroyEnemy(e) {
+    e.dead = true;
+    state.score += 300;
+    state.bursts.push({
+      x: e.x, y: e.y, age: 0,
+      color: e.kind === "dino" ? "#5AE38C" : e.kind === "cat" ? "#FF6FA5" : "#7FD8FF"
+    });
+    Audio_.sfxSmash();
+    updateHud();
+  }
+
+  function updateEnemies(dt) {
+    const p = state.player;
+    const frozen = state.power === "freeze";
+    const px = Math.floor(p.x), py = Math.floor(p.y);
+    state.dist = bfs(px, py);
+
+    for (const e of state.enemies) {
+      if (e.dead) continue;
+      e.phase += dt * 4;
+      e.wobble += dt * 3;
+      let spd = e.speed * (frozen ? 0 : 1) * (e.scared ? 0.55 : 1);
+
+      if (e.kind === "eagle") {
+        if (spd > 0) {
+          const dx = p.x - e.x, dy = p.y - e.y;
+          const len = Math.hypot(dx, dy) || 1;
+          const sign = e.scared ? -1 : 1;
+          e.x += (dx / len) * spd * dt * sign;
+          e.y += (dy / len) * spd * dt * sign;
+          e.x = Math.min(Math.max(e.x, 0.6), state.cols - 0.6);
+          e.y = Math.min(Math.max(e.y, 0.6), state.rows - 0.6);
+        }
+      } else {
+        if (spd > 0) {
+          const node = Math.floor(e.y) * state.cols + Math.floor(e.x);
+          if (!e.dir || (e.node !== node && atCentre(e, spd * dt))) {
+            e.x = Math.floor(e.x) + 0.5;
+            e.y = Math.floor(e.y) + 0.5;
+            e.node = node;
+            e.dir = chooseDir(e);
+          }
+          if (e.dir) moveAxis(e, spd * dt);
+        }
+      }
+
+      // contact
+      if (state.spawnGuard <= 0 && Math.hypot(e.x - p.x, e.y - p.y) < 0.62) {
+        if (state.power === "smash" || frozen) {
+          destroyEnemy(e);
+        } else if (e.scared) {
+          e.x = e.home[0]; e.y = e.home[1]; e.scared = state.power === "scare";
+          state.score += 200;
+          Audio_.sfxPower();
+          updateHud();
+        } else if (state.power === "shield") {
+          e.x = e.home[0]; e.y = e.home[1];
+          state.score += 75;
+          Audio_.sfxPower();
+        } else {
+          return loseLife();
+        }
+      }
+    }
+  }
+
+  function chooseDir(e) {
+    const cx = Math.floor(e.x), cy = Math.floor(e.y);
+    const here = state.dist[cy * state.cols + cx];
+    const back = e.dir ? [-e.dir[0], -e.dir[1]] : null;
+    const fwd = [], rev = [];
+    for (const k in DIRS) {
+      const d = DIRS[k];
+      const nx = cx + d[0], ny = cy + d[1];
+      if (!walkable(nx, ny)) continue;
+      const dv = state.dist[ny * state.cols + nx];
+      const opt = { d: d, score: dv < 0 ? 9999 : dv };
+      if (back && d[0] === back[0] && d[1] === back[1]) rev.push(opt);
+      else fwd.push(opt);
+    }
+    if (!fwd.length) { e.uphill = 0; return rev.length ? rev[0].d : null; }
+
+    // an enemy that has climbed away from the player for three tiles turns round,
+    // otherwise a wrong turn can trap it in a loop it may never leave
+    if (rev.length && e.uphill >= 3) { e.uphill = 0; return rev[0].d; }
+
+    fwd.sort(e.scared ? (a, b) => b.score - a.score : (a, b) => a.score - b.score);
+
+    // cats mistime a corner and take the second best way, never a random one
+    const jitter = e.kind === "cat" ? 0.3 : 0.06;
+    const pick = (fwd.length > 1 && Math.random() < jitter) ? fwd[1] : fwd[0];
+
+    const closer = e.scared ? pick.score > here : pick.score < here;
+    e.uphill = (here >= 0 && closer) ? 0 : e.uphill + 1;
+    return pick.d;
+  }
+
+
+  function loseLife() {
+    state.lives--;
+    state.hitFlash = 0.6;
+    state.power = null; state.powerLeft = 0;
+    Audio_.sfxHit();
+    updateHud();
+    if (state.lives <= 0) {
+      Audio_.stopMusic();
+      setTimeout(() => Audio_.sfxGameOver(), 220);
+      state.mode = "gameover";
+      showOverlay({
+        title: "CAUGHT",
+        text: "The herd got you. The ruins reset, but the relics you mined stay in the ledger.",
+        score: "Final score " + state.score + " · reached level " + state.level,
+        buttons: [
+          { label: "Retry level " + state.level, primary: true, action: () => { state.lives = 3; startLevel(state.level); } },
+          { label: "New run", action: () => newGame() }
+        ]
+      });
+    } else {
+      resetPositions();
+    }
+  }
+
+  function finishLevel() {
+    Audio_.stopMusic();
+    state.clearGlow = 1;
+    state.score += 500 + state.level * 150;
+    const leftover = state.coinSet.size;
+    updateHud();
+    if (state.level >= LEVELS.length) {
+      state.mode = "victory";
+      Audio_.sfxWin();
+      showOverlay({
+        title: "ALL SEVEN RUINS CLEARED",
+        text: "Twenty-one relics mined, and not one dinosaur got a bite. The purple ruins are quiet again.",
+        score: "Final score " + state.score + " · " + state.coinsTotal + " coins",
+        buttons: [{ label: "Run it again", primary: true, action: () => newGame() }]
+      });
+    } else {
+      state.mode = "levelclear";
+      Audio_.sfxLevel();
+      showOverlay({
+        title: "LEVEL " + state.level + " CLEAR",
+        text: "Three relics mined. The next ruin is bigger, and the herd is faster." +
+              (leftover ? " You left " + leftover + " coins behind." : " You swept every coin."),
+        score: "Score " + state.score,
+        buttons: [{ label: "Enter level " + (state.level + 1), primary: true, action: () => startLevel(state.level + 1) }]
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------- drawing
+  function draw() {
+    const w = state.cols * TS, h = state.rows * TS;
+    ctx.clearRect(0, 0, w, h);
+    if (state.mazeCanvas) ctx.drawImage(state.mazeCanvas, 0, 0, w, h);
+
+    drawCoins();
+    drawRelics();
+    state.enemies.forEach(e => { if (!e.dead) drawEnemy(e); });
+    drawBursts();
+    drawPlayer();
+
+    if (state.hitFlash > 0) {
+      ctx.fillStyle = "rgba(255, 92, 122," + (state.hitFlash * 0.45) + ")";
+      ctx.fillRect(0, 0, w, h);
+    }
+    if (state.clearGlow > 0) {
+      ctx.fillStyle = "rgba(255, 209, 102," + (state.clearGlow * 0.35) + ")";
+      ctx.fillRect(0, 0, w, h);
+    }
+  }
+
+  function drawCoins() {
+    const t = state.t;
+    ctx.save();
+    ctx.shadowColor = "rgba(255, 228, 92, .6)";
+    ctx.shadowBlur = 6;
+    ctx.fillStyle = "#FFE45C";
+    for (const key of state.coinSet) {
+      const c = key % state.cols, r = (key / state.cols) | 0;
+      const bob = Math.sin(t * 3 + (c + r) * 0.6) * 0.8;
+      ctx.beginPath();
+      ctx.arc(c * TS + TS / 2, r * TS + TS / 2 + bob, 2.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawRelics() {
+    const t = state.t;
+    for (let i = 0; i < state.relics.length; i++) {
+      const rel = state.relics[i];
+      if (rel.done) continue;
+      const cx = rel.x * TS + TS / 2, cy = rel.y * TS + TS / 2 + Math.sin(t * 2 + rel.spin) * 2;
+      const spin = t * 1.4 + rel.spin;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(spin);
+      const col = POWERS[rel.power].color;
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 16;
+      // a jagged shard, not a tidy gem
+      ctx.beginPath();
+      ctx.moveTo(0, -10);
+      ctx.lineTo(5.5, -2.5);
+      ctx.lineTo(8, 5);
+      ctx.lineTo(0, 10);
+      ctx.lineTo(-7, 4);
+      ctx.lineTo(-5, -3.5);
+      ctx.closePath();
+      ctx.fillStyle = col;
+      ctx.fill();
+      ctx.strokeStyle = "#FFFFFF";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "rgba(255,255,255,.55)";
+      ctx.beginPath();
+      ctx.moveTo(0, -10); ctx.lineTo(4, -2); ctx.lineTo(0, 3); ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // mining gauge
+      if (state.miningIdx === i && state.mining > 0) {
+        const bw = TS - 6;
+        ctx.fillStyle = "rgba(0,0,0,.55)";
+        ctx.fillRect(rel.x * TS + 3, rel.y * TS - 6, bw, 5);
+        ctx.fillStyle = col;
+        ctx.fillRect(rel.x * TS + 3, rel.y * TS - 6, bw * state.mining, 5);
+        ctx.strokeStyle = "rgba(255,255,255,.8)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(rel.x * TS + 3.5, rel.y * TS - 5.5, bw - 1, 4);
+      }
+    }
+  }
+
+  function drawBursts() {
+    for (const b of state.bursts) {
+      const t = b.age / 0.55;
+      const x = b.x * TS, y = b.y * TS;
+      ctx.save();
+      ctx.globalAlpha = 1 - t;
+      ctx.strokeStyle = b.color;
+      ctx.lineWidth = 2.5 * (1 - t) + 0.5;
+      ctx.beginPath();
+      ctx.arc(x, y, 5 + t * 17, 0, Math.PI * 2);
+      ctx.stroke();
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2 + t * 1.5;
+        const r1 = 5 + t * 13;
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1);
+        ctx.lineTo(x + Math.cos(a) * (r1 + 5), y + Math.sin(a) * (r1 + 5));
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  function drawPlayer() {
+    const p = state.player;
+    const jumpY = state.jump > 0 ? -Math.sin((1 - state.jump / 0.62) * Math.PI) * 11 : 0;
+    const x = p.x * TS, y = p.y * TS + jumpY;
+    const swing = Math.sin(p.phase) * (p.dir ? 1 : 0.25);
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(p.face < 0 ? -1 : 1, 1);
+
+    if (state.power === "shield") {
+      ctx.beginPath();
+      ctx.arc(0, 0, 13, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(90, 227, 140, " + (0.55 + Math.sin(state.t * 8) * 0.2) + ")";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    if (state.power === "smash") {
+      ctx.strokeStyle = "rgba(255, 92, 122, " + (0.5 + Math.sin(state.t * 12) * 0.25) + ")";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2 + state.t * 2;
+        const r = i % 2 ? 9 : 15;
+        const px = Math.cos(a) * r, py = Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+    if (state.power === "speed") {
+      ctx.strokeStyle = "rgba(255, 209, 102, .45)";
+      ctx.lineWidth = 1.6;
+      for (let i = 1; i <= 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-8 - i * 3.5, -3 + i * 2.2);
+        ctx.lineTo(-3 - i * 3.5, -3 + i * 2.2);
+        ctx.stroke();
+      }
+    }
+
+    ctx.lineCap = "round";
+    // legs
+    ctx.strokeStyle = "#2A1052";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, 2); ctx.lineTo(swing * 4.5, 9);
+    ctx.moveTo(0, 2); ctx.lineTo(-swing * 4.5, 9);
+    ctx.stroke();
+    // body
+    ctx.fillStyle = "#FFD166";
+    roundRect(ctx, -3.5, -5, 7, 8, 2.5);
+    ctx.fill();
+    // arms
+    ctx.strokeStyle = "#FFD166";
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(-1, -3); ctx.lineTo(-swing * 5 - 1, 1);
+    ctx.moveTo(1, -3); ctx.lineTo(swing * 5 + 2, -1);
+    ctx.stroke();
+    // head
+    ctx.fillStyle = "#FFE0A3";
+    ctx.beginPath();
+    ctx.arc(0.5, -9, 4.4, 0, Math.PI * 2);
+    ctx.fill();
+    // hair and eye
+    ctx.fillStyle = "#5B2E8F";
+    ctx.beginPath();
+    ctx.arc(0.5, -10.4, 4.3, Math.PI * 1.05, Math.PI * 2.1);
+    ctx.fill();
+    ctx.fillStyle = "#2A1052";
+    ctx.beginPath();
+    ctx.arc(2.4, -8.6, 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // "Yay!" bubble
+    if (state.shout > 0) {
+      const a = Math.min(1, state.shout / 0.4);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.font = '10px "Press Start 2P", monospace';
+      const text = "YAY!";
+      const tw = ctx.measureText(text).width;
+      const bx = x - tw / 2 - 7, by = y - 34 + jumpY * 0.2;
+      ctx.fillStyle = "rgba(255, 224, 163, .96)";
+      roundRect(ctx, bx, by, tw + 14, 20, 5);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x - 4, by + 20); ctx.lineTo(x + 4, by + 20); ctx.lineTo(x, by + 26);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#5B2E8F";
+      ctx.fillText(text, bx + 7, by + 14);
+      ctx.restore();
+    }
+  }
+
+  function drawEnemy(e) {
+    const x = e.x * TS, y = e.y * TS;
+    const scared = e.scared;
+    ctx.save();
+    ctx.translate(x, y);
+    const facing = e.kind === "eagle"
+      ? (state.player.x < e.x ? -1 : 1)
+      : (e.dir && e.dir[0] ? (e.dir[0] < 0 ? -1 : 1) : 1);
+    ctx.scale(facing, 1);
+
+    if (state.power === "freeze") {
+      ctx.globalAlpha = 0.85;
+      ctx.shadowColor = "#7FD8FF";
+      ctx.shadowBlur = 12;
+    } else if (scared) {
+      ctx.shadowColor = "#FF4FD8";
+      ctx.shadowBlur = 12;
+    }
+
+    if (e.kind === "dino") {
+      const bob = Math.sin(e.phase) * 1.2;
+      ctx.fillStyle = scared ? "#8C7FD8" : "#5AE38C";
+      // tail
+      ctx.beginPath();
+      ctx.moveTo(-4, 1 + bob); ctx.lineTo(-13, 5 + bob); ctx.lineTo(-4, 6 + bob);
+      ctx.closePath(); ctx.fill();
+      // body
+      ctx.beginPath();
+      ctx.ellipse(0, 1 + bob, 7.5, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // head
+      ctx.beginPath();
+      ctx.ellipse(6, -4 + bob, 5, 4, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      // legs
+      ctx.strokeStyle = scared ? "#6B5CB8" : "#2FA866";
+      ctx.lineWidth = 2.6; ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-2, 6 + bob); ctx.lineTo(-2 + Math.sin(e.phase) * 3, 10);
+      ctx.moveTo(3, 6 + bob); ctx.lineTo(3 - Math.sin(e.phase) * 3, 10);
+      ctx.stroke();
+      // back spikes
+      ctx.fillStyle = scared ? "#6B5CB8" : "#2FA866";
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * 4 - 1, -5 + bob); ctx.lineTo(i * 4 + 1.5, -8.5 + bob); ctx.lineTo(i * 4 + 2.5, -5 + bob);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.fillStyle = "#1B0A33";
+      ctx.beginPath(); ctx.arc(7.5, -5 + bob, 1.1, 0, Math.PI * 2); ctx.fill();
+    } else if (e.kind === "cat") {
+      const bob = Math.sin(e.phase * 1.4) * 1.4;
+      ctx.fillStyle = scared ? "#8C7FD8" : "#FF6FA5";
+      // tail, flicking
+      ctx.strokeStyle = scared ? "#8C7FD8" : "#FF6FA5";
+      ctx.lineWidth = 2.4; ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-6, 2 + bob);
+      ctx.quadraticCurveTo(-12, 0 + bob, -10, -6 + Math.sin(e.wobble) * 2);
+      ctx.stroke();
+      // body
+      ctx.beginPath();
+      ctx.ellipse(0, 2 + bob, 6.5, 4.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // head
+      ctx.beginPath();
+      ctx.arc(5, -3 + bob, 4.4, 0, Math.PI * 2);
+      ctx.fill();
+      // ears
+      ctx.beginPath();
+      ctx.moveTo(2.5, -6.5 + bob); ctx.lineTo(3, -11 + bob); ctx.lineTo(6, -7.5 + bob);
+      ctx.moveTo(6.5, -7 + bob); ctx.lineTo(9, -10.5 + bob); ctx.lineTo(9, -6 + bob);
+      ctx.closePath(); ctx.fill();
+      // legs
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(-2, 6 + bob); ctx.lineTo(-2 + Math.sin(e.phase * 1.4) * 3, 9.5);
+      ctx.moveTo(3, 6 + bob); ctx.lineTo(3 - Math.sin(e.phase * 1.4) * 3, 9.5);
+      ctx.stroke();
+      ctx.fillStyle = "#1B0A33";
+      ctx.beginPath(); ctx.arc(6.6, -3.6 + bob, 1, 0, Math.PI * 2); ctx.fill();
+    } else {
+      const flap = Math.sin(e.phase * 2.2);
+      const glide = Math.sin(e.phase * 0.9) * 1.5;
+      ctx.fillStyle = scared ? "#8C7FD8" : "#7FD8FF";
+      // wings
+      ctx.beginPath();
+      ctx.moveTo(-1, -1 + glide);
+      ctx.lineTo(-13, -5 - flap * 5 + glide);
+      ctx.lineTo(-4, 2 + glide);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(1, -1 + glide);
+      ctx.lineTo(11, -5 - flap * 5 + glide);
+      ctx.lineTo(4, 2 + glide);
+      ctx.closePath(); ctx.fill();
+      // body
+      ctx.beginPath();
+      ctx.ellipse(0, 0 + glide, 4.2, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // head and beak
+      ctx.beginPath();
+      ctx.arc(0.5, -6 + glide, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = scared ? "#6B5CB8" : "#FFD166";
+      ctx.beginPath();
+      ctx.moveTo(3, -6.5 + glide); ctx.lineTo(7.5, -5 + glide); ctx.lineTo(3, -3.8 + glide);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#1B0A33";
+      ctx.beginPath(); ctx.arc(1.8, -6.8 + glide, 1, 0, Math.PI * 2); ctx.fill();
+      // shadow on the floor, so the flight reads
+      ctx.globalAlpha *= 0.28;
+      ctx.fillStyle = "#0E0620";
+      ctx.beginPath();
+      ctx.ellipse(0, 11, 6, 2.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------------- hud + overlay
+  function updateHud() {
+    hud.level.textContent = state.level + " / " + LEVELS.length;
+    hud.score.textContent = state.score.toLocaleString();
+    hud.coins.textContent = (state.coins % 10) + " / 10";
+    hud.relics.innerHTML = "";
+    for (let i = 0; i < 3; i++) {
+      const d = document.createElement("span");
+      d.className = "pip" + (i < state.relicsDone ? " on" : "");
+      hud.relics.appendChild(d);
+    }
+    hud.lives.innerHTML = "";
+    for (let i = 0; i < 3; i++) {
+      const d = document.createElement("span");
+      d.className = "life" + (i < state.lives ? "" : " off");
+      hud.lives.appendChild(d);
+    }
+    if (state.power) {
+      hud.power.textContent = POWERS[state.power].label + " " + state.powerLeft.toFixed(1) + "s";
+      hud.power.style.color = POWERS[state.power].color;
+    } else {
+      hud.power.textContent = "—";
+      hud.power.style.color = "var(--ink-dim)";
+    }
+  }
+
+  function showOverlay(cfg) {
+    ovTitle.textContent = cfg.title;
+    ovText.textContent = cfg.text;
+    if (cfg.score) { ovScore.textContent = cfg.score; ovScore.hidden = false; }
+    else ovScore.hidden = true;
+    ovButtons.innerHTML = "";
+    (cfg.buttons || []).forEach(b => {
+      const el = document.createElement("button");
+      el.textContent = b.label;
+      if (b.primary) el.className = "btn-primary";
+      el.addEventListener("click", () => { Audio_.init(); Audio_.resume(); b.action(); });
+      ovButtons.appendChild(el);
+    });
+    overlay.hidden = false;
+    const first = ovButtons.querySelector("button");
+    if (first) first.focus();
+  }
+
+  function hideOverlay() { overlay.hidden = true; }
+
+  // ---------------------------------------------------------------- flow
+  function newGame() {
+    state.score = 0; state.lives = 3; state.coinsTotal = 0;
+    startLevel(1);
+  }
+
+  function startLevel(n) {
+    state.level = n;
+    buildLevel(n);
+    state.mode = "playing";
+    hideOverlay();
+    Audio_.init();
+    Audio_.resume();
+    if (Audio_.on) Audio_.startMusic(n);
+    state.last = performance.now();
+  }
+
+  function togglePause() {
+    if (state.mode === "playing") {
+      state.mode = "paused";
+      Audio_.stopMusic();
+      showOverlay({
+        title: "PAUSED",
+        text: "The herd is holding its breath.",
+        buttons: [{ label: "Resume", primary: true, action: resume }]
+      });
+    } else if (state.mode === "paused") resume();
+  }
+
+  function resume() {
+    state.mode = "playing";
+    hideOverlay();
+    if (Audio_.on) Audio_.startMusic(state.level);
+    state.last = performance.now();
+  }
+
+  // ---------------------------------------------------------------- loop
+  function frame(now) {
+    requestAnimationFrame(frame);
+    let dt = (now - state.last) / 1000;
+    state.last = now;
+    if (dt > 0.05) dt = 0.05;
+    state.t += dt;
+
+    if (state.mode === "playing") {
+      if (state.spawnGuard > 0) state.spawnGuard -= dt;
+      updatePlayer(dt);
+      if (state.mode === "playing") updateEnemies(dt);
+      if (state.power) {
+        state.powerLeft -= dt;
+        if (state.powerLeft <= 0) {
+          state.power = null; state.powerLeft = 0;
+          state.enemies.forEach(e => { e.scared = false; });
+        }
+        updateHud();
+      }
+      state.jump = Math.max(0, state.jump - dt);
+      state.shout = Math.max(0, state.shout - dt);
+    }
+    for (let i = state.bursts.length - 1; i >= 0; i--) {
+      state.bursts[i].age += dt;
+      if (state.bursts[i].age > 0.55) state.bursts.splice(i, 1);
+    }
+    state.hitFlash = Math.max(0, state.hitFlash - dt * 1.6);
+    state.clearGlow = Math.max(0, state.clearGlow - dt * 1.2);
+
+    if (state.grid) draw();
+  }
+
+  // ---------------------------------------------------------------- input
+  const KEYMAP = {
+    ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
+    w: "up", s: "down", a: "left", d: "right",
+    W: "up", S: "down", A: "left", D: "right"
+  };
+
+  window.addEventListener("keydown", (ev) => {
+    const dir = KEYMAP[ev.key];
+    if (dir) {
+      ev.preventDefault();
+      keys.wanted = dir;
+      if (state.mode === "playing") { const p = state.player; if (!p.dir) tryTurn(p, dir, 0.12); }
+      return;
+    }
+    if (ev.key === "p" || ev.key === "P") { togglePause(); return; }
+    if (ev.key === "m" || ev.key === "M") { toggleMusic(); return; }
+    if (ev.key === " " && (state.mode === "title" || state.mode === "gameover" || state.mode === "victory")) {
+      ev.preventDefault();
+      const b = ovButtons.querySelector("button");
+      if (b) b.click();
+    }
+  }, { passive: false });
+
+  document.querySelectorAll(".pad button").forEach(b => {
+    const set = (ev) => { ev.preventDefault(); keys.wanted = b.dataset.dir; };
+    b.addEventListener("pointerdown", set);
+    b.addEventListener("click", set);
+  });
+
+  let touchStart = null;
+  canvas.addEventListener("pointerdown", (ev) => { touchStart = [ev.clientX, ev.clientY]; });
+  canvas.addEventListener("pointerup", (ev) => {
+    if (!touchStart) return;
+    const dx = ev.clientX - touchStart[0], dy = ev.clientY - touchStart[1];
+    touchStart = null;
+    if (Math.hypot(dx, dy) < 18) return;
+    keys.wanted = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up");
+  });
+
+  function toggleMusic() {
+    Audio_.on = !Audio_.on;
+    const btn = document.getElementById("music-btn");
+    btn.setAttribute("aria-pressed", String(Audio_.on));
+    if (Audio_.on) { Audio_.init(); Audio_.resume(); if (state.mode === "playing") Audio_.startMusic(state.level); }
+    else Audio_.stopMusic();
+  }
+  document.getElementById("music-btn").addEventListener("click", toggleMusic);
+  document.getElementById("voice-btn").addEventListener("click", (ev) => {
+    Audio_.voice = !Audio_.voice;
+    ev.currentTarget.setAttribute("aria-pressed", String(Audio_.voice));
+  });
+
+  // ---------------------------------------------------------------- boot
+  function start(saved) {
+    if (saved && saved.level) {
+      state.score = saved.score || 0;
+      state.lives = saved.lives || 3;
+      state.coinsTotal = saved.coinsTotal || 0;
+    }
+    buildLevel((saved && saved.level) || 1);
+    state.level = (saved && saved.level) || 1;
+    state.mode = "title";
+    updateHud();
+    showOverlay({
+      title: "DINO DASH",
+      text: "You are a lone runner in a purple ruin. Dinosaurs plod after you, cats hunt fast, and eagles fly over the walls. Mine three relics to clear a level. Freeze or smash an enemy and it breaks apart.",
+      buttons: [{ label: "Start run", primary: true, action: () => newGame() }]
+    });
+    state.last = performance.now();
+    requestAnimationFrame(frame);
+  }
+
+  if (window.claude && window.claude.hot) {
+    try {
+      window.claude.hot.snapshot(() => ({
+        level: state.level, score: state.score, lives: state.lives, coinsTotal: state.coinsTotal
+      }));
+    } catch (e) { /* snapshots are optional */ }
+  }
+  if (window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(start);
+  else start((window.claude && window.claude.hot && window.claude.hot.data) || {});
+})();
+</script>
