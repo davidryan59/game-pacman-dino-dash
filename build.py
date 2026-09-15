@@ -13,6 +13,14 @@ HEAD = '''<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Dino Dash - a purple-maze arcade run: outrun dinosaurs, cats and eagles, mine three relics per level, clear seven levels.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Dino Dash">
+<meta property="og:description" content="A Pac-Man style maze run: outrun dinosaurs, cats and eagles, mine three relics per level, clear seven levels.">
+<meta property="og:image" content="https://pacman-dino-dash.netlify.app/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://pacman-dino-dash.netlify.app/social-card.png">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/favicon.svg">
 <style>*{box-sizing:border-box}body{margin:0;font:14px/1.5 system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
@@ -27,6 +35,9 @@ HEADERS = '''/
 
 /favicon.svg
   Content-Type: image/svg+xml; charset=UTF-8
+
+/social-card.png
+  Content-Type: image/png
 '''
 
 def main():
