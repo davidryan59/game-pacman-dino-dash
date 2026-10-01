@@ -23,7 +23,8 @@ and faster than the last.
 | Arrow keys or `W` `A` `S` `D` | Run |
 | `P` | Pause |
 | `M` | Mute the music |
-| Swipe the maze, or the on-screen pad | Run, on a phone |
+| `F`, or the full-screen button | Fill the screen, where the browser allows it |
+| Swipe the maze, or the on-screen pad | Run, on a phone or tablet |
 
 ## Rules
 
@@ -98,6 +99,13 @@ One HTML file, no libraries, no build step.
   travel, so a fast runner never skips a junction.
 - **Drawing.** Canvas 2D. The maze renders once to an offscreen canvas per
   level; runner, enemies, coins and relics draw each frame.
+- **Fitting the screen.** Everything is drawn in 28 px tiles, and the canvas
+  transform scales them to fit the window both ways, so the maze stays square
+  and the game logic never changes with the screen. The page column grows to
+  the maze's width. On a phone the title and scores shrink to one row each,
+  so the maze and the pad fit on the first screen. A touch screen held
+  sideways puts the pad on the left of the maze and the scores on its right,
+  with the maze the full height between them.
 - **Sound.** Web Audio, written by hand. A square-wave arpeggio, a triangle
   bass, and a filtered noise hat run off a 25 ms lookahead scheduler over an
   A-minor vamp. Coins, mining, hits and fanfares are short oscillator blips.

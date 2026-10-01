@@ -35,8 +35,9 @@
     min-height: 100vh;
   }
 
+  /* The column is as wide as the maze, and never narrower than 860px. */
   .shell {
-    max-width: 860px;
+    max-width: max(860px, var(--board-w, 0px));
     margin: 0 auto;
     padding-inline: 18px;
     padding-block: 22px 44px;
@@ -58,6 +59,8 @@
   }
   .tagline { margin: 6px 0 0; color: var(--ink-dim); font-size: 13.5px; max-width: 42ch; }
   .sound-row { display: flex; gap: 8px; }
+  .fs-btn { padding: 6px 9px; }
+  .fs-btn svg { display: block; width: 16px; height: 16px; }
 
   button {
     font: inherit;
@@ -110,7 +113,6 @@
   .stage { position: relative; display: flex; justify-content: center; }
   canvas {
     display: block;
-    max-width: 100%;
     height: auto;
     border: 1px solid var(--neon-soft);
     border-radius: 6px;
@@ -132,6 +134,7 @@
     background: rgba(14, 6, 32, .88);
     border-radius: 6px;
     backdrop-filter: blur(2px);
+    overflow-y: auto;
   }
   .overlay h2 {
     font-family: var(--font-display);
@@ -180,6 +183,50 @@
   .pad .right { grid-column: 3; grid-row: 2; }
   @media (hover: none) and (pointer: coarse) { .pad { display: grid; } }
 
+  /* ---------- small screens ---------- */
+  /* A phone: the title and buttons in one row, the scores in one row, so the
+     maze and the pad both fit on the first screen. */
+  @media (max-width: 600px) {
+    .shell { padding-block: 12px 32px; gap: 12px; }
+    .masthead { flex-wrap: nowrap; align-items: center; gap: 10px; }
+    .tagline { display: none; }
+    .hud { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  }
+  @media (max-width: 600px), (pointer: coarse) and (orientation: landscape) {
+    .sound-row button { padding: 6px 9px; }
+    .hud > div { padding: 6px 5px; gap: 4px; }
+    .hud .k { font-size: 6.5px; }
+    .hud .v { font-size: 12px; letter-spacing: -0.4px; white-space: nowrap; }
+    .hud #hud-power { font-size: 10px !important; }
+    .pips { gap: 3px; height: 16px; }
+    .pip { width: 9px; height: 9px; }
+    .life { width: 9px; height: 9px; }
+    .overlay { padding: 14px; gap: 10px; }
+    .overlay p { font-size: 12.5px; line-height: 1.5; }
+  }
+  /* A phone or tablet held sideways: the maze takes the full height, the pad
+     on its left and the title and scores on its right. */
+  @media (pointer: coarse) and (orientation: landscape) {
+    .shell {
+      max-width: none;
+      padding: 10px max(14px, env(safe-area-inset-right)) 32px max(14px, env(safe-area-inset-left));
+      display: grid;
+      gap: 14px;
+      grid-template-columns: minmax(200px, 1fr) auto minmax(150px, 1fr);
+      grid-template-rows: auto 1fr auto auto;
+      grid-template-areas: "pad stage head" "pad stage hud" "brief brief brief" "foot foot foot";
+      align-items: start;
+    }
+    .masthead { grid-area: head; flex-direction: column; align-items: flex-start; gap: 8px; }
+    .wordmark { font-size: 17px; }
+    .tagline { display: none; }
+    .hud { grid-area: hud; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stage { grid-area: stage; }
+    .pad { grid-area: pad; align-self: center; justify-self: center; margin: 0; grid-template-columns: repeat(3, 62px); grid-template-rows: repeat(2, 62px); }
+    .briefing { grid-area: brief; }
+    footer { grid-area: foot; }
+  }
+
   footer { color: var(--ink-dim); font-size: 12px; border-top: 1px solid var(--line); padding-top: 12px; line-height: 1.6; }
 
   [hidden] { display: none !important; }
@@ -198,6 +245,9 @@
     <div class="sound-row">
       <button id="music-btn" aria-pressed="true">♪ Music</button>
       <button id="voice-btn" aria-pressed="true">Voice</button>
+      <button id="fs-btn" class="fs-btn" aria-label="Full screen" title="Full screen (F)" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
+      </button>
     </div>
   </header>
 
@@ -259,7 +309,7 @@
       <h3>CONTROLS</h3>
       <ul>
         <li><span><kbd>←</kbd> <kbd>↑</kbd> <kbd>↓</kbd> <kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to run.</span></li>
-        <li><span><kbd>P</kbd> pauses. <kbd>M</kbd> mutes the music.</span></li>
+        <li><span><kbd>P</kbd> pauses. <kbd>M</kbd> mutes the music. <kbd>F</kbd> fills the screen.</span></li>
         <li><span>On a phone, swipe the maze or use the pad above.</span></li>
       </ul>
     </div>
@@ -637,20 +687,53 @@
   }
 
   // ---------------------------------------------------------------- canvas
+  // The maze fits the screen. Drawing stays in units of TS pixels, and the
+  // canvas transform scales them by `zoom`.
+  let zoom = 1;
+  const sideways = window.matchMedia("(pointer: coarse) and (orientation: landscape)");
+  const stageEl = document.querySelector(".stage");
+  const padEl = document.querySelector(".pad");
+
+  function fitZoom(w, h) {
+    const root = document.documentElement;
+    const vw = root.clientWidth, vh = root.clientHeight;
+    let availW, availH;
+    if (sideways.matches) {
+      // The page padding, the pad and score columns, and the gaps between them
+      availW = vw - 28 - 200 - 150 - 28;
+      availH = vh - 20;
+    } else {
+      const padH = padEl.offsetHeight ? padEl.offsetHeight + 16 : 0;
+      availW = vw - 36;
+      availH = vh - (stageEl.getBoundingClientRect().top + window.scrollY) - padH - 16;
+    }
+    return Math.max(0.45, Math.min(availW / w, availH / h));
+  }
+
   function resizeCanvas() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = state.cols * TS, h = state.rows * TS;
-    canvas.width = w * dpr; canvas.height = h * dpr;
-    canvas.style.width = w + "px";
-    canvas.style.height = h + "px";
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Twice, since the column takes the maze's width and the scores may rewrap.
+    for (let i = 0; i < 2; i++) {
+      zoom = fitZoom(w, h);
+      document.documentElement.style.setProperty("--board-w", Math.ceil(w * zoom) + "px");
+    }
+    canvas.width = Math.round(w * zoom * dpr); canvas.height = Math.round(h * zoom * dpr);
+    canvas.style.width = w * zoom + "px";
+    ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, 0, 0);
   }
+
+  let refit = 0;
+  window.addEventListener("resize", () => {
+    clearTimeout(refit);
+    refit = setTimeout(() => { if (state.grid) { resizeCanvas(); renderMaze(); } }, 80);
+  });
 
   function renderMaze() {
     const w = state.cols * TS, h = state.rows * TS;
     const mc = document.createElement("canvas");
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    mc.width = w * dpr; mc.height = h * dpr;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2) * zoom;
+    mc.width = Math.round(w * dpr); mc.height = Math.round(h * dpr);
     const m = mc.getContext("2d");
     m.setTransform(dpr, 0, 0, dpr, 0, 0);
 
@@ -1450,6 +1533,7 @@
     }
     if (ev.key === "p" || ev.key === "P") { togglePause(); return; }
     if (ev.key === "m" || ev.key === "M") { toggleMusic(); return; }
+    if ((ev.key === "f" || ev.key === "F") && canFull) { toggleFull(); return; }
     if (ev.key === " " && (state.mode === "title" || state.mode === "gameover" || state.mode === "victory")) {
       ev.preventDefault();
       const b = ovButtons.querySelector("button");
@@ -1485,6 +1569,20 @@
     Audio_.voice = !Audio_.voice;
     ev.currentTarget.setAttribute("aria-pressed", String(Audio_.voice));
   });
+
+  // Full screen takes the whole page, so the maze grows to fill it.
+  // iPhones have no full-screen mode, so there the button stays hidden.
+  const canFull = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+  function toggleFull() {
+    const page = document.documentElement;
+    const on = document.fullscreenElement || document.webkitFullscreenElement;
+    const p = on ? (document.exitFullscreen || document.webkitExitFullscreen).call(document)
+                 : (page.requestFullscreen || page.webkitRequestFullscreen).call(page);
+    if (p && p.catch) p.catch(() => {});
+  }
+  const fsBtn = document.getElementById("fs-btn");
+  fsBtn.hidden = !canFull;
+  fsBtn.addEventListener("click", () => { toggleFull(); fsBtn.blur(); });
 
   // ---------------------------------------------------------------- boot
   function start(saved) {
